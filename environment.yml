@@ -1,0 +1,15 @@
+name: MatrixCompletion
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - scipy
+  - cvxpy
+  - pandas
+  - scikit-learn
+  - sqlalchemy
+  - pg8000
+  - cloud-sql-python-connector
+  - dask
+prefix: /Users/awd/opt/anaconda3/envs/MatrixCompletion
