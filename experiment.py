@@ -2,22 +2,18 @@
 
 import cvxpy as cp
 import numpy as np
+from numpy.random import Generator
 from cvxpy.atoms import normNuc, multiply, norm
-from numpy.random import Generator, PCG64
 from pandas import DataFrame
 from scipy import stats as st
 from sklearn.utils.extmath import randomized_svd
 
-from EMS.manager import active_remote_engine, do_on_cluster
+from EMS.manager import active_remote_engine, do_on_cluster, unroll_experiment
 from dask.distributed import Client, LocalCluster
 
+
 def seed(n: int, snr: float, p: float, mc: int) -> int:
-    return 1 + n * 1000 + round(snr * 1000) + round(p * 1000) + mc
-
-
-def create_rng(n: int, snr: float, p: float, mc: int = 0) -> Generator:
-    rng = np.random.default_rng(seed=seed(n, snr, p, mc))
-    return rng
+    return round(1 + n * 1000 + round(snr * 1000) + round(p * 1000) + mc * 100000)
 
 
 def _df(c: list, l: list) -> DataFrame:
@@ -121,19 +117,17 @@ def take_measurements(Mhat, u, v):
 
 
 def do_matrix_completion(*, n: int, snr: float, p: float, mc: int, tmethod='0') -> DataFrame:
-    rng = create_rng(n, snr, p, mc)
+    rng = np.random.default_rng(seed=seed(n, snr, p, mc))
 
     u, v, M, noise, obs = make_data(n, p)
-
     t = 0. if tmethod == '0' else suggested_t(observed=obs, n=n)
-
     Y = snr * M + noise
     X, _ = nuc_norm_problem(Y=Y, observed=obs, t=t)
     Mhat = X.value
 
     cos_l, cos_r = take_measurements(Mhat, u, v)
 
-    return df_experiment(n, snr,p, mc, t, cos_l, cos_r)
+    return df_experiment(n, snr, p, mc, t, cos_l, cos_r)
 
 
 def nucnormproblem(Y, observed, t):
@@ -194,13 +188,22 @@ def get_measurements(n, root='', tmethod='0'):
 
 
 def test_experiment() -> dict:
+    # exp = dict(table_name='test',
+    #            base_index=0,
+    #            db_url='sqlite:///data/MatrixCompletion.db3',
+    #            multi_res=[{
+    #                'n': [10],
+    #                'snr': [1.0],
+    #                'p': [0.0],
+    #                'mc': [0]
+    #            }])
     exp = dict(table_name='test',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
-                   'n': [round(p, 0) for p in np.linspace(10, 100, 10)],
-                   'snr': np.linspace(1, 10, 10),
-                   'p': np.linspace(0, 1, 11),
+                   'n': [round(p) for p in np.linspace(10, 100, 10)],
+                   'snr': [round(p, 0) for p in np.linspace(1, 10, 10)],
+                   'p': [round(p, 1) for p in np.linspace(0, 1, 11)],
                    'mc': list(range(5))
                }])
     return exp
@@ -213,5 +216,15 @@ def do_local_experiment():
             do_on_cluster(exp, do_matrix_completion, client)
 
 
+def do_test():
+    params = unroll_experiment(test_experiment())
+    for p in params:
+        df = do_matrix_completion(**p)
+        print(df)
+    # df = do_matrix_completion(n=10, snr=1., p=0., mc=0)
+    # print(df)
+
+
 if __name__ == "__main__":
     do_local_experiment()
+    # do_test()
