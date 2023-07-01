@@ -197,14 +197,23 @@ def test_experiment() -> dict:
     #                'p': [0.0],
     #                'mc': [0]
     #            }])
-    exp = dict(table_name='test',
+    # exp = dict(table_name='test',
+    #            base_index=0,
+    #            db_url='sqlite:///data/MatrixCompletion.db3',
+    #            multi_res=[{
+    #                'n': [round(p) for p in np.linspace(10, 100, 10)],
+    #                'snr': [round(p, 0) for p in np.linspace(1, 10, 10)],
+    #                'p': [round(p, 1) for p in np.linspace(0, 1, 11)],
+    #                'mc': list(range(5))
+    #            }])
+    exp = dict(table_name='mc:0001',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
-                   'n': [round(p) for p in np.linspace(10, 100, 10)],
-                   'snr': [round(p, 0) for p in np.linspace(1, 10, 10)],
-                   'p': [round(p, 1) for p in np.linspace(0, 1, 11)],
-                   'mc': list(range(5))
+                   'n': [round(p) for p in np.linspace(10, 1000, 41)],
+                   'snr': [round(p, 3) for p in np.linspace(1, 20, 39)],
+                   'p': [round(p, 3) for p in np.linspace(0., 1., 41)],
+                   'mc': list(range(20))
                }])
     return exp
 
@@ -217,10 +226,13 @@ def do_local_experiment():
 
 
 def do_test():
-    params = unroll_experiment(test_experiment())
-    for p in params:
-        df = do_matrix_completion(**p)
-        print(df)
+    exp = test_experiment()
+    print(exp)
+    params = unroll_experiment(exp)
+    pass
+    # for p in params:
+    #     df = do_matrix_completion(**p)
+    #     print(df)
     # df = do_matrix_completion(n=10, snr=1., p=0., mc=0)
     # print(df)
 
