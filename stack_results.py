@@ -100,7 +100,7 @@ def drop_table(table_name):
 
 
 if __name__ == "__main__":
-    write_results_to_csv('test')
+    write_results_to_csv('mc-0002')
     # sort_rewrite_results_to_sql('en:0011', 'en:0012')
 #     reset_index('en:0022')
 #     stack_q_results('en:0023')

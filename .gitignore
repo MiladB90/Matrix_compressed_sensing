@@ -152,3 +152,4 @@ cython_debug/
 #.idea/
 data/MatrixCompletion.db3
 *.csv
+*.json

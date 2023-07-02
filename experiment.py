@@ -206,14 +206,32 @@ def test_experiment() -> dict:
     #                'p': [round(p, 1) for p in np.linspace(0, 1, 11)],
     #                'mc': list(range(5))
     #            }])
-    exp = dict(table_name='mc:0001',
-               base_index=0,
+    # exp = dict(table_name='mc:0001',
+    #            base_index=0,
+    #            db_url='sqlite:///data/MatrixCompletion.db3',
+    #            multi_res=[{
+    #                'n': [round(p) for p in np.linspace(10, 1000, 41)],
+    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 39)],
+    #                'p': [round(p, 3) for p in np.linspace(0., 1., 41)],
+    #                'mc': list(range(20))
+    #            }])
+    # exp = dict(table_name='mc-0002',
+    #            base_index=0,
+    #            db_url='sqlite:///data/MatrixCompletion.db3',
+    #            multi_res=[{
+    #                'n': [round(p) for p in np.linspace(10, 500, 21)],
+    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 39)],
+    #                'p': [round(p, 3) for p in np.linspace(0., 1., 41)],
+    #                'mc': list(range(20))
+    #            }])
+    exp = dict(table_name='mc-0002',
+               base_index=1519,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
-                   'n': [round(p) for p in np.linspace(10, 1000, 41)],
+                   'n': [round(p) for p in np.linspace(10, 500, 21)],
                    'snr': [round(p, 3) for p in np.linspace(1, 20, 39)],
                    'p': [round(p, 3) for p in np.linspace(0., 1., 41)],
-                   'mc': list(range(20))
+                   'mc': [20]
                }])
     return exp
 
