@@ -10,7 +10,9 @@ from sklearn.utils.extmath import randomized_svd
 
 from EMS.manager import active_remote_engine, do_on_cluster, unroll_experiment
 from dask.distributed import Client, LocalCluster
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 def seed(n: int, snr: float, p: float, mc: int) -> int:
     return round(1 + n * 1000 + round(snr * 1000) + round(p * 1000) + mc * 100000)
@@ -225,7 +227,7 @@ def test_experiment() -> dict:
     #                'mc': list(range(20))
     #            }])
     exp = dict(table_name='mc-0002',
-               base_index=1519,
+               base_index=9853,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
                    'n': [round(p) for p in np.linspace(10, 500, 21)],
