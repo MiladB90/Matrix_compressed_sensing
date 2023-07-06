@@ -49,7 +49,7 @@ class Databases:
         self.remote = remote
 
     def _push_to_database(self):
-        df = pandas.concat(self.results)
+        df = pd.concat(self.results)
         # Store locally for durability.
         with self.local.connect() as ldb:
             df.to_sql(self.table_name, ldb, if_exists='append', method='multi')
@@ -188,7 +188,7 @@ def unroll_experiment(experiment: dict) -> list:
 def dedup_experiment(df: DataFrame, params: list) -> list:
     dedup = []
     for p in params:
-        test = df
+        test = df.copy()
         for k, v in p.items():
             test = test.loc[test[k] == v]
             if len(test.index) == 0:
