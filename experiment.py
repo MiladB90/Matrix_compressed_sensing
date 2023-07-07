@@ -128,7 +128,7 @@ def test_experiment() -> dict:
     #                'mc': list(range(20))
     #            }])
     exp = dict(table_name='mc-0002',
-               base_index=9853,
+               base_index=35098,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
                    'n': [round(p) for p in np.linspace(10, 500, 21)],

@@ -232,6 +232,7 @@ def do_on_cluster(experiment: dict, instance: callable, client: Client, remote: 
     db.final_push()
     total_time = time.perf_counter() - tick
     logging.info(f"Performed experiment in {total_time:0.4f} seconds")
-    logging.info(f"Seconds/Instance: {(total_time / instance_count):0.4f}")
+    if instance_count > 0:
+        logging.info(f"Seconds/Instance: {(total_time / instance_count):0.4f}")
     logging.info(f'Starting index: {base_index}, Count: {instance_count}, Next index: {base_index + instance_count}.')
 
