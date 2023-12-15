@@ -7,6 +7,8 @@
 from numpy import float64
 from pandas import DataFrame, read_sql_table, concat
 import sqlalchemy as sa
+from datetime import datetime, timezone
+from math import floor
 
 
 def stack_results(table_name: str):
@@ -45,22 +47,36 @@ def stack_q_results(table_name: str):
     mean_table.to_csv('gam_q_mean_' + table_name + '.csv')
 
 
-def write_results_to_csv(table_name: str):
-    engine = sa.create_engine('sqlite:///data/MatrixCompletion.db3', echo=True)
-    ldb = engine.connect()  # ldb == Local Database. 'db' will be the remote persistent db.
+def strip_colon(s: str) -> str:
+    l = s.split(':')
+    return '-'.join(l)
 
-    pdf = read_sql_table(table_name, ldb, index_col='index')
-    # pdf.sort_values(by=['c4'], inplace=True)
-    # pdf.sort_values(by=['c4', 'mc'], inplace=True)
-    # pdf.reset_index(drop=True, inplace=True)
 
-    # pdfg = pdf.groupby(by='c4').mean()
-    # print(pdfg)
-    pdf.to_csv(f'{table_name}.csv')
+def timestamp() -> int:
+    now = datetime.now(timezone.utc)
+    return floor(now.timestamp())
 
-    pass
 
-    ldb.close()
+def write_results_to_csv(db_url: str, table_name: str):
+    engine = sa.create_engine(db_url, echo=True)
+
+    with engine.connect() as db:
+        df = read_sql_table(table_name, db, index_col='index')
+
+    df.to_csv(f'{strip_colon(table_name)}-{timestamp()}.csv')
+
+    engine.dispose()
+
+
+def write_groupby_results_to_csv(db_url: str, table_name: str, groupby: list):
+    engine = sa.create_engine(db_url, echo=True)
+
+    with engine.connect() as db:
+        df = read_sql_table(table_name, db, index_col='index')
+
+    mean_df = df.groupby(by=groupby).mean()
+    mean_df.to_csv(f'{strip_colon(table_name)}-stacked-{timestamp()}.csv')
+
     engine.dispose()
 
 
@@ -100,9 +116,10 @@ def drop_table(table_name):
 
 
 if __name__ == "__main__":
-    write_results_to_csv('mc-0002')
+    write_results_to_csv('sqlite:///data/MatrixCompletion.db3', 'mc-0006')
+    # write_groupby_results_to_csv('sqlite:///data/MatrixCompletion.db3', 'mc-0006', ['m', 'n', 'snr', 'p'])
     # sort_rewrite_results_to_sql('en:0011', 'en:0012')
-#     reset_index('en:0022')
-#     stack_q_results('en:0023')
-#     stack_results('en:0023')
+    # reset_index('en:0022')
+    # stack_q_results('en:0023')
+    # stack_results('en:0023')
     # drop_table('en:0021')

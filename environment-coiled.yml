@@ -1,4 +1,4 @@
-name: milad_mc
+name: MatrixCompletion
 channels:
   - conda-forge
   - defaults
@@ -16,9 +16,7 @@ dependencies:
   - sqlalchemy
   - pg8000
   - cloud-sql-python-connector
-  - pip
-  - pip:
-    - git+https://github.com/adonoho/EMS.git
 variables:
   MKL_NUM_THREADS: '1'
   OPENBLAS_NUM_THREADS: '1'
+prefix: /Users/awd/opt/anaconda3/envs/MatrixCompletion

@@ -154,3 +154,6 @@ data/MatrixCompletion.db3
 *.csv
 *.json
 data/LaptopMatrixCompletion.db3
+.RData
+.Rhistory
+*.db3

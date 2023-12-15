@@ -1,0 +1,22 @@
+. Model
+  .  M = snr * u * v^t + noise
+  . observes ~ Ber(p)
+  . Mhat = argmin ||X||_nuc s.t. X_observes = M_pbservese
+. Parameters
+  . m                    number of rows, dim(u)
+  . n                    number of columns, dim(v)
+  . p                    probability of observing an entry
+  . mc                   monte carlo number
+  . cosL                 cos of angle between u and uhat
+  . cosR                 cos of angle between v and vhat
+  . nsspecfit            linear fit of bulk of Mhat agains bulk of the noise
+    _slope               slope
+    _intercept           intercept
+    _r2                  fit score (R-squared)
+  . entr_noise_std       standard deviaiton of each entry of the noise matrix
+  . noise_frob_squared   squared frobenius norm of the noise matrix (is approximately m * n * entr_noise_std^2)
+  . sv0, sv1, ...        singular values of Mhat
+  . phi                  (1 - phi)m rows have entr_noise_std and phi * m rows have larger noise tau * entr_noise_std
+  . tau                  last phi * m rows have std tau * entr_noise_std
+  . q_order              takes two values: row, col  indicated along which dim noise sclation is applied
+
