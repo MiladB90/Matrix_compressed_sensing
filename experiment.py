@@ -314,11 +314,13 @@ def test_experiment() -> dict:
     mr = exp['multi_res']
     max_matrix_dim = 0
     for params in mr:
-        max_matrix_dim = max([[max_matrix_dim], params['m'], params['n']])[0]
+        paramlist =[max_matrix_dim]
+        paramlist.extend(params['m'])
+        paramlist.extend(params['n'])
+        max_matrix_dim = max(paramlist)
     for params in mr:
         params['max_matrix_dim'] = [int(max_matrix_dim)]
     return exp
-
 
 def do_coiled_experiment():
     exp = test_experiment()
