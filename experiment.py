@@ -298,7 +298,17 @@ def test_experiment() -> dict:
     #         'mc': list(range(21,31))
     #     }
     #     mr.append(d)
-    exp = dict(table_name='milad_mc_0013',
+    # exp = dict(table_name='milad_mc_0013',
+    #            base_index=0,
+    #            db_url='sqlite:///data/MatrixCompletion.db3',
+    #            multi_res=[{
+    #                'm': [100, 200, 300, 400, 500],
+    #                'n': [500],
+    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
+    #                'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
+    #                'mc': [round(p) for p in np.linspace(1, 20, 20)]
+    #            }])
+    exp = dict(table_name='milad_mc_0014',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
@@ -306,10 +316,8 @@ def test_experiment() -> dict:
                    'n': [500],
                    'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
-                   'mc': [round(p) for p in np.linspace(1, 20, 20)]
-               }])
-
-    # this makes 38k runs 
+                   'mc': [round(p) for p in np.linspace(21, 500, 480)]
+               }]
     # add max_matrix_dim for having unified output size
     mr = exp['multi_res']
     max_matrix_dim = 0
