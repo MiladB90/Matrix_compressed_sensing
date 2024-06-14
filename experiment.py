@@ -321,6 +321,7 @@ def test_experiment() -> dict:
                }]
               )
     # add max_matrix_dim for having unified output size
+    # 152k rows
     mr = exp['multi_res']
     max_matrix_dim = 0
     for params in mr:
