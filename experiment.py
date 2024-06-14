@@ -6,7 +6,7 @@ from cvxpy.atoms import normNuc, multiply, norm
 from pandas import DataFrame
 from scipy import stats as st
 from sklearn.linear_model import LinearRegression
-from dask_jobqueue import SLURMCluster
+# from dask_jobqueue import SLURMCluster
 
 from EMS.manager import active_remote_engine, do_on_cluster, unroll_experiment, get_gbq_credentials
 from dask.distributed import Client, LocalCluster
