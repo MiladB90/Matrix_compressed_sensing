@@ -356,8 +356,8 @@ def do_local_experiment():
             do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
 
 def do_sherlock_experiment():
-    exp = test_experiment()
-    nodes = 200
+    exp = test_experiment()
+    nodes = 200
     with SLURMCluster(queue='normal,owners,donoho,hns,stat',
                       cores=1, memory='4GiB', processes=1,
                       walltime=’24:00:00') as cluster:
