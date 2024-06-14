@@ -319,6 +319,7 @@ def test_experiment() -> dict:
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
                    'mc': [round(p) for p in np.linspace(21, 100, 80)]
                }]
+              )
     # add max_matrix_dim for having unified output size
     mr = exp['multi_res']
     max_matrix_dim = 0
