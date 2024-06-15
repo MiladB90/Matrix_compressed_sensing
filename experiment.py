@@ -27,13 +27,13 @@ def _df(c: list, l: list) -> DataFrame:
 
 
 
-def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int,
+def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_dim: int,
                       cos_l: float, cos_r: float, svv: np.array,
                       slope: float, intercept: float, r_squared: float,
                       noise_frob_squared: float, entr_noise_std: float) -> DataFrame:
-    c = ['m', 'n', 'snr', 'p', 'mc', 'cosL', 'cosR', 'nsspecfit_slope',
+    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'cosL', 'cosR', 'nsspecfit_slope',
          'nsspecfit_intercept', 'nsspecfit_r2', 'noise_frob_squared', 'entr_noise_std']
-    d = [m, n, snr, p, mc, cos_l, cos_r, slope, intercept, r_squared, noise_frob_squared, entr_noise_std]
+    d = [m, n, snr, p, mc, max_matrix_dim, cos_l, cos_r, slope, intercept, r_squared, noise_frob_squared, entr_noise_std]
     for i, sv in enumerate(svv):
         c.append(f'sv{i}')
         d.append(sv)
@@ -114,7 +114,7 @@ def do_matrix_completion(*, m: int, n: int, snr: float, p: float, mc: int, max_m
     fullsvv = np.full([max_matrix_dim], np.nan)
     fullsvv[:len(svv)] = svv
 
-    return df_experiment_svv(m, n, snr, p, mc, cos_l, cos_r, fullsvv, slope, intercept, r_squared,
+    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, cos_l, cos_r, fullsvv, slope, intercept, r_squared,
                              noise_frob_squared, entr_noise_std)
 
 
@@ -309,7 +309,7 @@ def test_experiment() -> dict:
     #                'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
     #                'mc': [round(p) for p in np.linspace(1, 20, 20)]
     #            }])
-    exp = dict(table_name='milad_mc_0014',
+    exp = dict(table_name='milad_mc_0015',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
