@@ -309,7 +309,7 @@ def test_experiment() -> dict:
     #                'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
     #                'mc': [round(p) for p in np.linspace(1, 20, 20)]
     #            }])
-    exp = dict(table_name='milad_mc_0015',
+    exp = dict(table_name='milad_mc_0016',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
@@ -317,7 +317,7 @@ def test_experiment() -> dict:
                    'n': [500],
                    'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
-                   'mc': [round(p) for p in np.linspace(21, 100, 80)]
+                   'mc': [round(p) for p in np.linspace(101, 300, 200)]
                }]
               )
     # add max_matrix_dim for having unified output size
