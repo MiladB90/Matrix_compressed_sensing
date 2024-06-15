@@ -1,9 +1,9 @@
 #!/bin/sh
 
-## sherlock deployment file that requests 64 cpu cores for 18 hours to run main.py
+## sherlock deployment file that requests 32 cpu cores for 18 hours to run main.py
 #SBATCH --job-name=matrix_completion
 #SBATCH --partition=normal,owners,donoho,hns,stat
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=32
 #SBATCH --time=18:00:00
 #SBATCH --error=mc0014.err
 #SBATCH --output=mc0014.out
