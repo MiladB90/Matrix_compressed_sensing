@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import cvxpy as cp
 import numpy as np
-from numpy.random import Generator
+from numpy.random import Generator, ndarray
 from cvxpy.atoms import normNuc, multiply, norm
 from pandas import DataFrame
 from scipy import stats as st
@@ -28,12 +28,13 @@ def _df(c: list, l: list) -> DataFrame:
 
 
 def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_dim: int,
+                      proj_dim: int, proj_entry_std: float,
                       cos_l: float, cos_r: float, svv: np.array,
                       slope: float, intercept: float, r_squared: float,
                       noise_frob_squared: float, entr_noise_std: float) -> DataFrame:
-    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'cosL', 'cosR', 'nsspecfit_slope',
+    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'proj_dim', 'proj_entry_std', 'cosL', 'cosR', 'nsspecfit_slope',
          'nsspecfit_intercept', 'nsspecfit_r2', 'noise_frob_squared', 'entr_noise_std']
-    d = [m, n, snr, p, mc, max_matrix_dim, cos_l, cos_r, slope, intercept, r_squared, noise_frob_squared, entr_noise_std]
+    d = [m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std, cos_l, cos_r, slope, intercept, r_squared, noise_frob_squared, entr_noise_std]
     for i, sv in enumerate(svv):
         c.append(f'sv{i}')
         d.append(sv)
@@ -48,13 +49,17 @@ def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     M = np.outer(u, v)
     entr_noise_std = 1 / np.sqrt(n) 
     noise = rng.normal(0, entr_noise_std, (m, n))
-    observes = st.bernoulli.rvs(p, size=(m, n), random_state=rng)
+    proj_dim = int(p * m * n)
+    proj_entry_std = 1 / np.sqrt(m * n)
+    proj_mat = rng.normal(0, proj_entry_std, (m * n, proj_dim))
 
-    return u, v, M, noise, observes, entr_noise_std   
+    return u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std   
 
 
 # problem setup
-def nuc_norm_problem(Y, observed) -> tuple:
+def nuc_norm_cs_solver(m: int n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
+    # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
+    
     X = cp.Variable(Y.shape)
     objective = cp.Minimize(normNuc(X))
     Z = multiply(X - Y, observed)
@@ -64,7 +69,7 @@ def nuc_norm_problem(Y, observed) -> tuple:
 
     prob.solve()
 
-    return X, prob
+    return X.value
 
 
 # measurements
@@ -101,14 +106,13 @@ def vectorize(matrix):
     m, n = matrix.shape
     return np.reshape(matrix, m * n)
 
-def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, proj_dim: int, mc: int, max_matrix_dim: int) -> DataFrame:
+def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int, max_matrix_dim: int) -> DataFrame:
     rng = np.random.default_rng(seed=seed(m, n, snr, p, mc))
 
-    u, v, M, noise, proj_mat, entr_noise_std = make_data(m, n, p, rng)
+    u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std = make_data(m, n, p, rng)
     noisy_signal = snr * M + noise
     Y = proj_mat * vectorize(noisy_signal)
-    X, _ = nuc_norm_problem(Y=Y, observed=obs)
-    Mhat = X.value
+    Mhat = nuc_norm_cs_solver(m=m, n=n, proj_mat=proj_mat, Y=Y)
 
     cos_l, cos_r, svv, slope, intercept, r_squared = take_measurements_svv(Mhat, u, v, noise)
 
@@ -119,7 +123,7 @@ def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, proj_dim: int, m
     fullsvv = np.full([max_matrix_dim], np.nan)
     fullsvv[:len(svv)] = svv
 
-    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, cos_l, cos_r, fullsvv, slope, intercept, r_squared,
+    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std, cos_l, cos_r, fullsvv, slope, intercept, r_squared,
                              noise_frob_squared, entr_noise_std)
 
 
@@ -133,7 +137,7 @@ def test_experiment() -> dict:
                    'm': [100, 200, 300, 400, 500],
                    'n': [500],
                    'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
-                   'proj_dim': [round(p, 3) for p in np.linspace(.1, 1, 19)],
+                   'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
                    'mc': [round(p) for p in np.linspace(1, 20, 20)]
                }]
               )
@@ -198,8 +202,8 @@ def do_test():
     #     df = do_matrix_completion(**p)
     #     print(df)
     pass
-    df = do_matrix_compressed_sensing(m=100, n=100, snr=10., proj_dim=5000, mc=20)
-    df = do_matrix_compressed_sensing(m=12, n=8, snr=20., proj_dim=10, mc=20)
+    df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20)
+    df = do_matrix_compressed_sensing(m=12, n=8, snr=20., p=1./2., mc=20)
     print(df)
 
 
