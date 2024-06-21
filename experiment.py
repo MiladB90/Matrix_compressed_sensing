@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import cvxpy as cp
 import numpy as np
-from numpy.random import Generator, ndarray
+from numpy.random import Generator
+from numpy import ndarray
 from cvxpy.atoms import normNuc, multiply, norm
 from pandas import DataFrame
 from scipy import stats as st
