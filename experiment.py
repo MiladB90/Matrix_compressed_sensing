@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import cvxpy as cp
 import numpy as np
+import pandas as pd
 from numpy.random import Generator
 from numpy import ndarray
 from cvxpy.atoms import normNuc, multiply, norm
@@ -59,7 +60,7 @@ def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     # random projection matrix: m * n --> p * m * n
     proj_dim = int(p * m * n)
     proj_entry_std = 1 / np.sqrt(m * n)
-    proj_mat = rng.normal(0, proj_entry_std, (m * n, proj_dim))
+    proj_mat = rng.normal(0, proj_entry_std, (proj_dim, m * n))
 
     return u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std   
 
@@ -67,16 +68,13 @@ def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
 # optimization problem solver
 def nuc_norm_cs_solver(m: int, n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
     # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
-    
     X = cp.Variable((m, n))
     objective = cp.Minimize(normNuc(X))
-    Z = proj_mat * vectorize(X) - Y
+    Z = proj_mat @ vectorize(X) - Y
     constraints = [Z == 0]
 
     prob = cp.Problem(objective, constraints)
-
     prob.solve()
-
     return X.value
 
 
@@ -100,7 +98,7 @@ def take_measurements_svv(Mhat, u, v, noise):
     r = min(r1, r2)
 
     regr = LinearRegression()
-    X = noise_spectrum[1:r].reshape(-1,1)
+    X = noise_spectrum[1:r].reshape(-1, 1)
     Y = svv[1:r].reshape(-1,1)
 
     regr.fit(X, Y)
@@ -119,7 +117,7 @@ def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int,
 
     u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std = make_data(m, n, p, rng)
     noisy_signal = snr * M + noise
-    Y = proj_mat * vectorize(noisy_signal)
+    Y = proj_mat @ vectorize(noisy_signal)
     Mhat = nuc_norm_cs_solver(m=m, n=n, proj_mat=proj_mat, Y=Y)
 
     cos_l, cos_r, svv, slope, intercept, r_squared = take_measurements_svv(Mhat, u, v, noise)
@@ -131,13 +129,12 @@ def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int,
     fullsvv = np.full([max_matrix_dim], np.nan)
     fullsvv[:len(svv)] = svv
 
-    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std, cos_l, cos_r, fullsvv, slope, intercept, r_squared,
+    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std,
+                             cos_l, cos_r, fullsvv, slope, intercept, r_squared,
                              noise_frob_squared, entr_noise_std)
 
 
 def test_experiment() -> dict:
-   
-   
     exp = dict(table_name='milad_cs_0001',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
@@ -190,14 +187,14 @@ def do_local_experiment():
 # def do_sherlock_experiment():
 #     exp = test_experiment()
 #     nodes = 200
-#     with SLURMCluster(queue='normal,owners,donoho,hns,stat',
-#                       cores=1, memory='4GiB', processes=1,
-#                       walltime=’24:00:00') as cluster:
-#         cluster.scale(jobs=nodes)
-#         logging.info(cluster.job_script())
-#         with Client(cluster) as client:
-#             do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
-#         cluster.scale(0)
+#     with SLURMCluster(queue='normal,owners,donoho,hns,stat',
+#                       cores=1, memory='4GiB', processes=1,
+#                       walltime=’24:00:00') as cluster:
+#         cluster.scale(jobs=nodes)
+#         logging.info(cluster.job_script())
+#         with Client(cluster) as client:
+#             do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+#         cluster.scale(0)
 
 def do_test():
     # print(get_gbq_credentials())
@@ -210,9 +207,14 @@ def do_test():
     #     df = do_matrix_completion(**p)
     #     print(df)
     pass
-    df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20)
-    df = do_matrix_compressed_sensing(m=12, n=8, snr=20., p=1./2., mc=20)
-    print(df)
+    # df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20, max_matrix_dim=100)
+    df = do_matrix_compressed_sensing(m=12, n=8, snr=20., p=1./2., mc=20, max_matrix_dim=12)
+    with pd.option_context('display.max_rows', None,
+                           'display.max_columns', None,
+                           'display.precision', 3,
+                           ):
+        print(df)
+    # print(df)
 
 
 if __name__ == "__main__":
