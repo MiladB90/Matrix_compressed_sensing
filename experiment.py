@@ -64,7 +64,7 @@ def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
 
 
 # optimization problem solver
-def nuc_norm_cs_solver(m: int n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
+def nuc_norm_cs_solver(m: int, n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
     # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
     
     X = cp.Variable((m, n))
