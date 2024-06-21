@@ -32,9 +32,12 @@ def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_
                       cos_l: float, cos_r: float, svv: np.array,
                       slope: float, intercept: float, r_squared: float,
                       noise_frob_squared: float, entr_noise_std: float) -> DataFrame:
-    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'proj_dim', 'proj_entry_std', 'cosL', 'cosR', 'nsspecfit_slope',
-         'nsspecfit_intercept', 'nsspecfit_r2', 'noise_frob_squared', 'entr_noise_std']
-    d = [m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std, cos_l, cos_r, slope, intercept, r_squared, noise_frob_squared, entr_noise_std]
+    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'proj_dim', 'proj_entry_std',
+         'cosL', 'cosR', 'nsspecfit_slope','nsspecfit_intercept', 'nsspecfit_r2',
+         'noise_frob_squared', 'entr_noise_std']
+    d = [m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std,
+         cos_l, cos_r, slope, intercept, r_squared,
+         noise_frob_squared, entr_noise_std]
     for i, sv in enumerate(svv):
         c.append(f'sv{i}')
         d.append(sv)
@@ -44,11 +47,15 @@ def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_
 def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     u = rng.normal(size=m)
     v = rng.normal(size=n)
+    # normalizing to have unit vectors
     u /= np.linalg.norm(u)
     v /= np.linalg.norm(v)
+    
     M = np.outer(u, v)
     entr_noise_std = 1 / np.sqrt(n) 
     noise = rng.normal(0, entr_noise_std, (m, n))
+
+    # random projection matrix: m * n --> p * m * n
     proj_dim = int(p * m * n)
     proj_entry_std = 1 / np.sqrt(m * n)
     proj_mat = rng.normal(0, proj_entry_std, (m * n, proj_dim))
