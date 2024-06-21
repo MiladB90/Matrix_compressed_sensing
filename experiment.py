@@ -56,20 +56,20 @@ def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     return u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std   
 
 
-# problem setup
-# def nuc_norm_cs_solver(m: int n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
-#     # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
+# optimization problem solver
+def nuc_norm_cs_solver(m: int n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
+    # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
     
-#     X = cp.Variable(Y.shape)
-#     objective = cp.Minimize(normNuc(X))
-#     Z = multiply(X - Y, observed)
-#     constraints = [Z == 0]
+    X = cp.Variable((m, n))
+    objective = cp.Minimize(normNuc(X))
+    Z = proj_mat * vectorize(X) - Y
+    constraints = [Z == 0]
 
-#     prob = cp.Problem(objective, constraints)
+    prob = cp.Problem(objective, constraints)
 
-#     prob.solve()
+    prob.solve()
 
-#     return X.value
+    return X.value
 
 
 # measurements
