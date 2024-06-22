@@ -5,6 +5,7 @@ import pandas as pd
 from numpy.random import Generator
 from numpy import ndarray
 from cvxpy.atoms import normNuc, multiply, norm
+import cvxpy
 from pandas import DataFrame
 from scipy import stats as st
 from sklearn.linear_model import LinearRegression
@@ -26,9 +27,6 @@ def _df(c: list, l: list) -> DataFrame:
     d = dict(zip(c, l))
     return DataFrame(data=d, index=[0])
 
-
-
-
 def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_dim: int,
                       proj_dim: int, proj_entry_std: float,
                       cos_l: float, cos_r: float, svv: np.array,
@@ -44,7 +42,6 @@ def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_
         c.append(f'sv{i}')
         d.append(sv)
     return _df(c, d)   
-
 
 def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     u = rng.normal(size=m)
@@ -62,15 +59,14 @@ def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     proj_entry_std = 1 / np.sqrt(m * n)
     proj_mat = rng.normal(0, proj_entry_std, (proj_dim, m * n))
 
-    return u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std   
-
+    return u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std
 
 # optimization problem solver
 def nuc_norm_cs_solver(m: int, n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
     # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
     X = cp.Variable((m, n))
     objective = cp.Minimize(normNuc(X))
-    Z = proj_mat @ vectorize(X) - Y
+    Z = proj_mat @ cvxpy.vec(X, order='C') - Y
     constraints = [Z == 0]
 
     prob = cp.Problem(objective, constraints)
@@ -108,16 +104,12 @@ def take_measurements_svv(Mhat, u, v, noise):
 
     return cosL, cosR, svv, slope, intercept, r_squared
 
-def vectorize(matrix):
-    m, n = matrix.shape
-    return np.reshape(matrix, m * n)
-
 def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int, max_matrix_dim: int) -> DataFrame:
     rng = np.random.default_rng(seed=seed(m, n, snr, p, mc))
 
     u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std = make_data(m, n, p, rng)
     noisy_signal = snr * M + noise
-    Y = proj_mat @ vectorize(noisy_signal)
+    Y = proj_mat @ noisy_signal.flatten(order='C')
     Mhat = nuc_norm_cs_solver(m=m, n=n, proj_mat=proj_mat, Y=Y)
 
     cos_l, cos_r, svv, slope, intercept, r_squared = take_measurements_svv(Mhat, u, v, noise)
@@ -131,8 +123,7 @@ def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int,
 
     return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std,
                              cos_l, cos_r, fullsvv, slope, intercept, r_squared,
-                             noise_frob_squared, entr_noise_std)
-
+                             noise_frob_squared, entr_noisels_std)
 
 def test_experiment() -> dict:
     # 3800 rows
@@ -208,14 +199,12 @@ def do_test():
     #     print(df)
     pass
     # df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20, max_matrix_dim=100)
-    # df = do_matrix_compressed_sensing(m=12, n=8, snr=20., p=1./2., mc=20, max_matrix_dim=12)
-    # with pd.option_context('display.max_rows', None,
-    #                        'display.max_columns', None,
-    #                        'display.precision', 3,
-    #                        ):
-    #     print(df)
-    # print(df)
-
+    df = do_matrix_compressed_sensing(m=12, n=20, snr=2., p=0.75, mc=20, max_matrix_dim=20)
+    with pd.option_context('display.max_rows', None,
+                           'display.max_columns', None,
+                           'display.precision', 3,
+                           ):
+        print(df)
 
 if __name__ == "__main__":
     do_local_experiment()
