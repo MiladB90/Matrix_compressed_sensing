@@ -182,7 +182,7 @@ def do_local_experiment():
     exp = test_experiment()
     with LocalCluster(dashboard_address='localhost:8787') as cluster:
         with Client(cluster) as client:
-            do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+            do_on_cluster(exp, do_matrix_compressed_sensing, client, credentials=get_gbq_credentials())
 
 # def do_sherlock_experiment():
 #     exp = test_experiment()
