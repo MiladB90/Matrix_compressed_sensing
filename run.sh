@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ## sherlock deployment file that requests 32 cpu cores for 18 hours to run main.py
-#SBATCH --job-name=matrix_compressed_sensing
+#SBATCH --job-name=cs01
 #SBATCH --partition=normal,donoho,hns,stat, owners
 #SBATCH --cpus-per-task=8
 #SBATCH --time=01:00:00
