@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 import cvxpy as cp
 import numpy as np
+import pandas as pd
 from numpy.random import Generator
+from numpy import ndarray
 from cvxpy.atoms import normNuc, multiply, norm
+import cvxpy
 from pandas import DataFrame
 from scipy import stats as st
 from sklearn.linear_model import LinearRegression
@@ -24,47 +27,51 @@ def _df(c: list, l: list) -> DataFrame:
     d = dict(zip(c, l))
     return DataFrame(data=d, index=[0])
 
-
-
-
 def df_experiment_svv(m: int, n: int, snr: float, p: float, mc: int, max_matrix_dim: int,
+                      proj_dim: int, proj_entry_std: float,
                       cos_l: float, cos_r: float, svv: np.array,
                       slope: float, intercept: float, r_squared: float,
                       noise_frob_squared: float, entr_noise_std: float) -> DataFrame:
-    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'cosL', 'cosR', 'nsspecfit_slope',
-         'nsspecfit_intercept', 'nsspecfit_r2', 'noise_frob_squared', 'entr_noise_std']
-    d = [m, n, snr, p, mc, max_matrix_dim, cos_l, cos_r, slope, intercept, r_squared, noise_frob_squared, entr_noise_std]
+    c = ['m', 'n', 'snr', 'p', 'mc', 'max_matrix_dim', 'proj_dim', 'proj_entry_std',
+         'cosL', 'cosR', 'nsspecfit_slope','nsspecfit_intercept', 'nsspecfit_r2',
+         'noise_frob_squared', 'entr_noise_std']
+    d = [m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std,
+         cos_l, cos_r, slope, intercept, r_squared,
+         noise_frob_squared, entr_noise_std]
     for i, sv in enumerate(svv):
         c.append(f'sv{i}')
         d.append(sv)
     return _df(c, d)   
 
-
 def make_data(m: int, n: int, p: float, rng: Generator) -> tuple:
     u = rng.normal(size=m)
     v = rng.normal(size=n)
+    # normalizing to have unit vectors
     u /= np.linalg.norm(u)
     v /= np.linalg.norm(v)
+    
     M = np.outer(u, v)
     entr_noise_std = 1 / np.sqrt(n) 
     noise = rng.normal(0, entr_noise_std, (m, n))
-    observes = st.bernoulli.rvs(p, size=(m, n), random_state=rng)
 
-    return u, v, M, noise, observes, entr_noise_std   
+    # random projection matrix: m * n --> p * m * n
+    proj_dim = int(p * m * n)
+    proj_entry_std = 1 / np.sqrt(m * n)
+    proj_mat = rng.normal(0, proj_entry_std, (proj_dim, m * n))
 
+    return u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std
 
-# problem setup
-def nuc_norm_problem(Y, observed) -> tuple:
-    X = cp.Variable(Y.shape)
+# optimization problem solver
+def nuc_norm_cs_solver(m: int, n: int, proj_mat: ndarray, Y: ndarray) -> ndarray:
+    # it solves argmin |X|_0 s.t. proj_mat * vec(X) = Y
+    X = cp.Variable((m, n))
     objective = cp.Minimize(normNuc(X))
-    Z = multiply(X - Y, observed)
+    Z = proj_mat @ cvxpy.vec(X, order='C') - Y
     constraints = [Z == 0]
 
     prob = cp.Problem(objective, constraints)
-
     prob.solve()
-
-    return X, prob
+    return X.value
 
 
 # measurements
@@ -87,7 +94,7 @@ def take_measurements_svv(Mhat, u, v, noise):
     r = min(r1, r2)
 
     regr = LinearRegression()
-    X = noise_spectrum[1:r].reshape(-1,1)
+    X = noise_spectrum[1:r].reshape(-1, 1)
     Y = svv[1:r].reshape(-1,1)
 
     regr.fit(X, Y)
@@ -97,13 +104,13 @@ def take_measurements_svv(Mhat, u, v, noise):
 
     return cosL, cosR, svv, slope, intercept, r_squared
 
-def do_matrix_completion(*, m: int, n: int, snr: float, p: float, mc: int, max_matrix_dim: int) -> DataFrame:
+def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int, max_matrix_dim: int) -> DataFrame:
     rng = np.random.default_rng(seed=seed(m, n, snr, p, mc))
 
-    u, v, M, noise, obs, entr_noise_std = make_data(m, n, p, rng)
-    Y = snr * M + noise
-    X, _ = nuc_norm_problem(Y=Y, observed=obs)
-    Mhat = X.value
+    u, v, M, proj_dim, proj_entry_std, proj_mat, noise, entr_noise_std = make_data(m, n, p, rng)
+    noisy_signal = snr * M + noise
+    Y = proj_mat @ noisy_signal.flatten(order='C')
+    Mhat = nuc_norm_cs_solver(m=m, n=n, proj_mat=proj_mat, Y=Y)
 
     cos_l, cos_r, svv, slope, intercept, r_squared = take_measurements_svv(Mhat, u, v, noise)
 
@@ -114,214 +121,24 @@ def do_matrix_completion(*, m: int, n: int, snr: float, p: float, mc: int, max_m
     fullsvv = np.full([max_matrix_dim], np.nan)
     fullsvv[:len(svv)] = svv
 
-    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, cos_l, cos_r, fullsvv, slope, intercept, r_squared,
-                             noise_frob_squared, entr_noise_std)
-
+    return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std,
+                             cos_l, cos_r, fullsvv, slope, intercept, r_squared,
+                             noise_frob_squared, entr_noisels_std)
 
 def test_experiment() -> dict:
-    # exp = dict(table_name='test',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'n': [10],
-    #                'snr': [1.0],
-    #                'p': [0.0],
-    #                'mc': [0]
-    #            }])
-    # exp = dict(table_name='test',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'n': [round(p) for p in np.linspace(10, 100, 10)],
-    #                'snr': [round(p, 0) for p in np.linspace(1, 10, 10)],
-    #                'p': [round(p, 1) for p in np.linspace(0, 1, 11)],
-    #                'mc': list(range(5))
-    #            }])
-    # exp = dict(table_name='mc:0001',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'n': [round(p) for p in np.linspace(10, 1000, 41)],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 39)],
-    #                'p': [round(p, 3) for p in np.linspace(0., 1., 41)],
-    #                'mc': list(range(20))
-    #            }])
-    # exp = dict(table_name='mc-0002',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'n': [round(p) for p in np.linspace(10, 500, 21)],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 39)],
-    #                'p': [round(p, 3) for p in np.linspace(0., 1., 41)],
-    #                'mc': list(range(20))
-    #            }])
-    # exp = dict(table_name='mc-0003',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                # 'n': [round(p) for p in np.linspace(10, 500, 21)],
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
-    #                'p': [round(p, 3) for p in np.linspace(0.05, 1., 20)],
-    #                'mc': [20]
-    #            }])
-    # exp = dict(table_name='mc-0003',
-    #            base_index=400,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
-    #                'p': [1.],
-    #                'mc': [20]
-    #            },{
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
-    #                'p': [2./3.],
-    #                'mc': [20]
-    #            }])
-    # mr = exp['multi_res']
-    # for snr in np.linspace(3., 6., 31):
-    #     for x in np.linspace(1.5, 4.0, 26):
-    #         p = (x / snr) ** 2
-    #         if p <= 1.0:
-    #             d = {
-    #                 'n': [500],
-    #                 'snr': [snr],
-    #                 'p': [p],
-    #                 'mc': [20]
-    #             }
-    #             mr.append(d)
-    # exp = dict(table_name='mc-0004',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'm': [500],
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
-    #                'p': [round(p, 3) for p in np.linspace(0.05, 1., 20)],
-    #                'mc': [20]
-    #            }])
-    # exp = dict(table_name='mc-0004',
-    #            base_index=400,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'm': [100, 200, 300, 400, 500],
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
-    #                'p': [0.5, 0.75, 1.0],
-    #                'mc': [20]
-    #            }])
-    # exp = dict(table_name='mc-0004',
-    #            base_index=520,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'm': [100, 200, 300, 400, 500],
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
-    #                'p': [0.5, 0.75, 1.0],
-    #                'mc': list(range(21, 60))
-    #            }])
-    # exp = dict(table_name='mc-0005',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'm': [500],
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
-    #                'p': [0.5, 0.75, 1.0],
-    #                'mc': [20]
-    #            }])
-    # exp = dict(table_name='mc-0007',
-    #            base_index=0,
-    #            db_url='sqlite:///data/EMS.db3',
-    #            multi_res=[])
-    # mr = exp['multi_res']
-    # for snr in np.linspace(1.5, 2.25, 4):
-    #     p = 1./(2. * (snr - 1.) ** 2 + 1.)
-    #     d = {
-    #         'm': [500],
-    #         'n': [500],
-    #         'snr': [snr],
-    #         'p': list(np.linspace(p**2, min(p**3, 1.), 10)),
-    #         'mc': [20]
-    #     }
-    #     mr.append(d)
-    # exp = dict(table_name='mc-0007',
-    #            description="20230824, Add more seed indicies to the existing [20-40] in table mc-0007, "
-    #             "i.e. do 100 more range(41,141).",
-    #            params=[])
-    # mr = exp['params']
-    # for snr in np.linspace(1.5, 2.25, 4):
-    #     p = 1./(2. * (snr - 1.) ** 2 + 1.)
-    #     d = {
-    #         'm': [500],
-    #         'n': [500],
-    #         'snr': [snr],
-    #         'p': list(np.linspace(p**2, min(p**3, 1.), 10)),
-    #         'mc': list(range(41, 141))
-    #     }
-    #     mr.append(d)
-    # exp = dict(table_name='mc-0008',
-    #            base_index=0,
-    #            db_url='sqlite:///data/EMS.db3',
-    #            multi_res=[])
-    # mr = exp['multi_res']
-    # for snr in np.linspace(1.5, 2.25, 4):
-    #     p = 1./(snr * (2. * (snr - 1.) ** 2 + 1.))
-    #     d = {
-    #         'm': [500],
-    #         'n': [500],
-    #         'snr': [snr],
-    #         'p': list(np.linspace(p / 2., min(p * 3, 1.), 10)),
-    #         'mc': [20]
-    #     }
-    #     mr.append(d)
-    # exp = dict(table_name='mc-0009',
-    #            base_index=0,
-    #            db_url='sqlite:///data/EMS.db3',
-    #            multi_res=[])
-    # mr = exp['multi_res']
-    # for m in np.linspace(10, 100, 19):
-    #     d = {
-    #         'm': [round(m)],
-    #         'n': [round(m)],
-    #         'snr': [1, 5, 10, 20, 1000],
-    #         'p': [round(p, 1) for p in np.linspace(.1, 1, 10)],
-    #         'mc': list(range(21,31))
-    #     }
-    #     mr.append(d)
-    # for m in np.linspace(100, 500, 21):
-    #     d = {
-    #         'm': [round(m)],
-    #         'n': [round(m)],
-    #         'snr': [1, 5, 10, 20, 1000],
-    #         'p': [round(p, 1) for p in np.linspace(.1, 1, 10)],
-    #         'mc': list(range(21,31))
-    #     }
-    #     mr.append(d)
-    # exp = dict(table_name='milad_mc_0013',
-    #            base_index=0,
-    #            db_url='sqlite:///data/MatrixCompletion.db3',
-    #            multi_res=[{
-    #                'm': [100, 200, 300, 400, 500],
-    #                'n': [500],
-    #                'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
-    #                'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
-    #                'mc': [round(p) for p in np.linspace(1, 20, 20)]
-    #            }])
-    exp = dict(table_name='milad_mc_0016',
+    # 3800 rows
+    exp = dict(table_name='milad_cs_0001',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
-                   'm': [100, 200, 300, 400, 500],
+                   'm': [100],
                    'n': [500],
-                   'snr': [round(p, 3) for p in np.linspace(1, 20, 20)],
+                   'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
-                   'mc': [round(p) for p in np.linspace(101, 300, 200)]
+                   'mc': [round(p) for p in np.linspace(1, 20, 20)]
                }]
               )
     # add max_matrix_dim for having unified output size
-    # 380k rows
     mr = exp['multi_res']
     max_matrix_dim = 0
     for params in mr:
@@ -356,23 +173,23 @@ def do_local_experiment():
     exp = test_experiment()
     with LocalCluster(dashboard_address='localhost:8787') as cluster:
         with Client(cluster) as client:
-            do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+            do_on_cluster(exp, do_matrix_compressed_sensing, client, credentials=get_gbq_credentials())
 
 # def do_sherlock_experiment():
 #     exp = test_experiment()
 #     nodes = 200
-#     with SLURMCluster(queue='normal,owners,donoho,hns,stat',
-#                       cores=1, memory='4GiB', processes=1,
-#                       walltime=’24:00:00') as cluster:
-#         cluster.scale(jobs=nodes)
-#         logging.info(cluster.job_script())
-#         with Client(cluster) as client:
-#             do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
-#         cluster.scale(0)
+#     with SLURMCluster(queue='normal,owners,donoho,hns,stat',
+#                       cores=1, memory='4GiB', processes=1,
+#                       walltime=’24:00:00') as cluster:
+#         cluster.scale(jobs=nodes)
+#         logging.info(cluster.job_script())
+#         with Client(cluster) as client:
+#             do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+#         cluster.scale(0)
 
 def do_test():
     print(get_gbq_credentials())
-    # exp = test_experiment()
+    exp = test_experiment()
     # import json
     # j_exp = json.dumps(exp, indent=4)
     # print(j_exp)
@@ -381,10 +198,13 @@ def do_test():
     #     df = do_matrix_completion(**p)
     #     print(df)
     pass
-    # df = do_matrix_completion(m=100, n=100, snr=10., p=2./3., mc=20)
-    # df = do_matrix_completion(m=12, n=8, snr=20., p=2./3., mc=20)
-    # print(df)
-
+    # df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20, max_matrix_dim=100)
+    df = do_matrix_compressed_sensing(m=12, n=20, snr=2., p=0.75, mc=20, max_matrix_dim=20)
+    with pd.option_context('display.max_rows', None,
+                           'display.max_columns', None,
+                           'display.precision', 3,
+                           ):
+        print(df)
 
 if __name__ == "__main__":
     do_local_experiment()
