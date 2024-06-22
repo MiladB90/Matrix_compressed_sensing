@@ -197,7 +197,7 @@ def do_local_experiment():
 #         cluster.scale(0)
 
 def do_test():
-    # print(get_gbq_credentials())
+    print(get_gbq_credentials())
     exp = test_experiment()
     # import json
     # j_exp = json.dumps(exp, indent=4)
@@ -208,12 +208,12 @@ def do_test():
     #     print(df)
     pass
     # df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20, max_matrix_dim=100)
-    df = do_matrix_compressed_sensing(m=12, n=8, snr=20., p=1./2., mc=20, max_matrix_dim=12)
-    with pd.option_context('display.max_rows', None,
-                           'display.max_columns', None,
-                           'display.precision', 3,
-                           ):
-        print(df)
+    # df = do_matrix_compressed_sensing(m=12, n=8, snr=20., p=1./2., mc=20, max_matrix_dim=12)
+    # with pd.option_context('display.max_rows', None,
+    #                        'display.max_columns', None,
+    #                        'display.precision', 3,
+    #                        ):
+    #     print(df)
     # print(df)
 
 
