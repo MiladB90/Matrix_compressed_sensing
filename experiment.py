@@ -166,7 +166,7 @@ def do_coiled_experiment():
     )
     with coiled.Cluster(software=software_environment, n_workers=80) as cluster:
         with Client(cluster) as client:
-            do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+            do_on_cluster(exp, do_matrix_compressed_sensing, client, credentials=get_gbq_credentials())
 
 
 def do_local_experiment():
@@ -183,7 +183,7 @@ def do_sherlock_experiment():
         cluster.scale(jobs=nodes)
         logging.info(cluster.job_script())
         with Client(cluster) as client:
-            do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+            do_on_cluster(exp, do_matrix_compressed_sensing, client, credentials=get_gbq_credentials())
         cluster.scale(0)
 
 
@@ -195,7 +195,7 @@ def do_test():
     # print(j_exp)
     # params = unroll_experiment(exp)
     # for p in params:
-    #     df = do_matrix_completion(**p)
+    #     df = do_matrix_compressed_sensing(**p)
     #     print(df)
     pass
     # df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20, max_matrix_dim=100)
@@ -208,6 +208,6 @@ def do_test():
 
 if __name__ == "__main__":
     # do_local_experiment()
-    do_sherlock_experiment()
+    # do_sherlock_experiment()
     # do_coiled_experiment()
-    # do_test()
+    do_test()
