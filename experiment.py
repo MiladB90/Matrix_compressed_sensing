@@ -9,7 +9,7 @@ import cvxpy
 from pandas import DataFrame
 from scipy import stats as st
 from sklearn.linear_model import LinearRegression
-# from dask_jobqueue import SLURMCluster
+from dask_jobqueue import SLURMCluster
 
 from EMS.manager import active_remote_engine, do_on_cluster, unroll_experiment, get_gbq_credentials
 from dask.distributed import Client, LocalCluster
@@ -123,7 +123,7 @@ def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int,
 
     return df_experiment_svv(m, n, snr, p, mc, max_matrix_dim, proj_dim, proj_entry_std,
                              cos_l, cos_r, fullsvv, slope, intercept, r_squared,
-                             noise_frob_squared, entr_noisels_std)
+                             noise_frob_squared, entr_noise_std)
 
 def test_experiment() -> dict:
     # 3800 rows
@@ -132,7 +132,7 @@ def test_experiment() -> dict:
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
                    'm': [100],
-                   'n': [500],
+                   'n': [100, 200, 300, 400],
                    'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
                    'mc': [round(p) for p in np.linspace(1, 20, 20)]
@@ -175,21 +175,21 @@ def do_local_experiment():
         with Client(cluster) as client:
             do_on_cluster(exp, do_matrix_compressed_sensing, client, credentials=get_gbq_credentials())
 
-# def do_sherlock_experiment():
-#     exp = test_experiment()
-#     nodes = 200
-#     with SLURMCluster(queue='normal,owners,donoho,hns,stat',
-#                       cores=1, memory='4GiB', processes=1,
-#                       walltime=’24:00:00') as cluster:
-#         cluster.scale(jobs=nodes)
-#         logging.info(cluster.job_script())
-#         with Client(cluster) as client:
-#             do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
-#         cluster.scale(0)
+def do_sherlock_experiment():
+    exp = test_experiment()
+    nodes = 1000
+    with SLURMCluster(queue='normal,owners,donoho,hns,stat,bigmem',
+                      cores=1, memory='256GiB', processes=1, walltime='48:00:00') as cluster:
+        cluster.scale(jobs=nodes)
+        logging.info(cluster.job_script())
+        with Client(cluster) as client:
+            do_on_cluster(exp, do_matrix_completion, client, credentials=get_gbq_credentials())
+        cluster.scale(0)
+
 
 def do_test():
-    print(get_gbq_credentials())
-    exp = test_experiment()
+    # print(get_gbq_credentials())
+    # exp = test_experiment()
     # import json
     # j_exp = json.dumps(exp, indent=4)
     # print(j_exp)
@@ -199,7 +199,7 @@ def do_test():
     #     print(df)
     pass
     # df = do_matrix_compressed_sensing(m=100, n=100, snr=10., p=2./3., mc=20, max_matrix_dim=100)
-    df = do_matrix_compressed_sensing(m=12, n=20, snr=2., p=0.75, mc=20, max_matrix_dim=20)
+    df = do_matrix_compressed_sensing(m=12, n=20, snr=4., p=0.75, mc=20, max_matrix_dim=20)
     with pd.option_context('display.max_rows', None,
                            'display.max_columns', None,
                            'display.precision', 3,
@@ -207,7 +207,7 @@ def do_test():
         print(df)
 
 if __name__ == "__main__":
-    do_local_experiment()
+    # do_local_experiment()
     # do_sherlock_experiment()
     # do_coiled_experiment()
-    # do_test()
+    do_test()

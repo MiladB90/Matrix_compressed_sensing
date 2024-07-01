@@ -1,4 +1,4 @@
-name: milad_mc
+name: do_sherlock
 channels:
   - conda-forge
   - defaults
@@ -12,6 +12,7 @@ dependencies:
   - google-auth
   - pandas-gbq>=0.19.2
   - dask
+  - dask-jobqueue
   - coiled
   - sqlalchemy
   - pg8000
