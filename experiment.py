@@ -207,7 +207,7 @@ def do_test():
         print(df)
 
 if __name__ == "__main__":
-    # do_local_experiment()
-    do_sherlock_experiment()
+    do_local_experiment()
+    # do_sherlock_experiment()
     # do_coiled_experiment()
     # do_test()
