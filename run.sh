@@ -5,7 +5,7 @@
 #SBATCH --partition=normal,donoho,hns,stat,bigmem,dev,
 #SBATCH --cpus-per-task=6
 #SBATCH --mem-per-cpu=256G   # memory per cpu-core
-#SBATCH --time=48:00:00
+#SBATCH --time=24:00:00
 #SBATCH --error=cs0001.err
 #SBATCH --output=cs0001.out
 
