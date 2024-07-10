@@ -131,8 +131,8 @@ def test_experiment() -> dict:
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
-                   'm': [100],
-                   'n': [100, 200, 300, 400],
+                   'm': [50],
+                   'n': [10, 20, 30, 40, 50],
                    'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
                    'mc': [round(p) for p in np.linspace(1, 20, 20)]
