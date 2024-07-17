@@ -127,7 +127,7 @@ def do_matrix_compressed_sensing(*, m: int, n: int, snr: float, p: int, mc: int,
 
 def test_experiment() -> dict:
     # 3800 rows
-    exp = dict(table_name='milad_cs_0001',
+    exp = dict(table_name='milad_cs_0002',
                base_index=0,
                db_url='sqlite:///data/MatrixCompletion.db3',
                multi_res=[{
@@ -135,7 +135,7 @@ def test_experiment() -> dict:
                    'm': [10, 20, 30, 40, 50],
                    'snr': [round(p, 3) for p in np.linspace(1, 10, 10)],
                    'p': [round(p, 3) for p in np.linspace(.1, 1, 19)],
-                   'mc': [round(p) for p in np.linspace(1, 20, 20)]
+                   'mc': [round(p) for p in np.linspace(11, 300, 290)]
                }]
               )
     # add max_matrix_dim for having unified output size
